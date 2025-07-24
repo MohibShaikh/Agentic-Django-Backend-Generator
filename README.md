@@ -55,6 +55,38 @@ python universal_backend_builder.py --list-models
 ```
 Shows 15+ models including FREE ones and premium options from OpenAI, Anthropic, Google, etc.
 
+## 🏢 **For Very Complex ERDs (Enterprise)**
+
+Got a massive ERD with 50+ entities? Use our enterprise-grade system:
+
+### **🔍 Analyze Complexity First**
+```bash
+python enterprise_backend_builder.py your_massive_erd.json --analyze-only
+```
+
+### **🚀 Intelligent Processing**
+```bash
+# For massive ERDs (automatically detects complexity)
+python enterprise_backend_builder.py massive_erd.json --preset enterprise
+
+# Example output:
+# 📊 ERD Analysis Complete:
+#    • Entities: 37
+#    • Relationships: 60  
+#    • Complexity Score: 0.49
+#    • Recommended Chunks: 2
+#    • 🟡 MEDIUM COMPLEXITY - Chunked processing recommended
+```
+
+### **🧠 What Makes It Efficient:**
+
+**✅ Smart Chunking**: Breaks massive ERDs into dependency-aware chunks
+**✅ Token Optimization**: Minimizes API calls and costs for huge schemas  
+**✅ Memory Management**: Handles 100+ entity ERDs without memory issues
+**✅ Parallel Processing**: Generates multiple chunks simultaneously
+**✅ Dependency Resolution**: Handles complex relationships and circular deps
+**✅ Progressive Generation**: Builds incrementally for massive systems
+
 ## 📝 ERD Format
 
 ```json
