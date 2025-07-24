@@ -1,0 +1,12 @@
+{
+  "User": {
+    "name": "CharField",
+    "email": "EmailField",
+    "has_many": ["Job"]
+  },
+  "Job": {
+    "title": "CharField",
+    "description": "TextField",
+    "posted_by": "ForeignKey:User"
+  }
+} 
