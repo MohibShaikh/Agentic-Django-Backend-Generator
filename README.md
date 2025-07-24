@@ -45,15 +45,15 @@ Below is a high-level overview of the agentic workflow used to generate your Dja
 
 ```mermaid
 flowchart TD
-    subgraph Input
+    subgraph Input["🎯 Input Phase"]
         A["User provides ERD (JSON)"]
     end
 
-    subgraph Orchestration
+    subgraph Orchestration["🧠 Orchestration Phase"]
         B["PlannerAgent<br/>(Orchestrates workflow)"]
     end
 
-    subgraph Generation
+    subgraph Generation["⚡ Generation Phase"]
         C1["ModelAgent<br/>models.py"]
         C2["SerializerAgent<br/>serializers.py"]
         C3["ViewAgent<br/>views.py"]
@@ -62,18 +62,18 @@ flowchart TD
         C6["CustomFeatureAgent<br/>(optional)"]
     end
 
-    subgraph HITL_Review["Human-in-the-Loop Review"]
-        D1["Approve/Edit/Skip models.py"]
-        D2["Approve/Edit/Skip serializers.py"]
-        D3["Approve/Edit/Skip views.py"]
-        D4["Approve/Edit/Skip urls.py"]
-        D5["Approve/Edit/Skip settings.py"]
-        D6["Approve/Edit/Skip custom feature"]
+    subgraph HITL_Review["👤 Human-in-the-Loop Review"]
+        D1["✅ Approve/Edit/Skip models.py"]
+        D2["✅ Approve/Edit/Skip serializers.py"]
+        D3["✅ Approve/Edit/Skip views.py"]
+        D4["✅ Approve/Edit/Skip urls.py"]
+        D5["✅ Approve/Edit/Skip settings.py"]
+        D6["✅ Approve/Edit/Skip custom feature"]
     end
 
-    subgraph Deployment
+    subgraph Deployment["🚀 Deployment Phase"]
         E["DeploymentAgent<br/>requirements.txt, Dockerfile, Procfile"]
-        F["All code written to backend/ directory"]
+        F["📁 All code written to backend/ directory"]
     end
 
     A --> B
@@ -85,11 +85,18 @@ flowchart TD
     D5 --> C6 --> D6
     D6 --> E --> F
 
-    %% Styling
-    classDef agent fill:#f9f,stroke:#333,stroke-width:1px;
-    classDef hitl fill:#bbf,stroke:#333,stroke-width:1px;
-    class B,C1,C2,C3,C4,C5,C6 agent;
-    class D1,D2,D3,D4,D5,D6 hitl;
+    %% Professional Styling with High Contrast
+    classDef inputNode fill:#e1f5fe,stroke:#01579b,stroke-width:3px,color:#000;
+    classDef orchestrationNode fill:#f3e5f5,stroke:#4a148c,stroke-width:3px,color:#000;
+    classDef agentNode fill:#e8f5e8,stroke:#1b5e20,stroke-width:3px,color:#000;
+    classDef hitlNode fill:#fff3e0,stroke:#e65100,stroke-width:3px,color:#000;
+    classDef deployNode fill:#fce4ec,stroke:#880e4f,stroke-width:3px,color:#000;
+    
+    class A inputNode;
+    class B orchestrationNode;
+    class C1,C2,C3,C4,C5,C6 agentNode;
+    class D1,D2,D3,D4,D5,D6 hitlNode;
+    class E,F deployNode;
 ```
 
 ## Usage
