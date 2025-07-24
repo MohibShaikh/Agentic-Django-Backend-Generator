@@ -21,17 +21,39 @@ Takes your ERD JSON → AI agents generate → Production-ready Django backend
 pip install openai aiofiles
 ```
 
-### **2. Set API Key**
+### **2. Choose Your Model & Set API Key**
 ```bash
-export OPENROUTER_API_KEY="your_key_here"
+# Use any model you want!
+export OPENROUTER_API_KEY="your_key_here"  # For 300+ models
+export OPENAI_API_KEY="your_key_here"      # For GPT models
+export ANTHROPIC_API_KEY="your_key_here"   # For Claude models
+export GOOGLE_API_KEY="your_key_here"      # For Gemini models
 ```
 
-### **3. Run**
+### **3. Run with ANY Model**
 ```bash
-python agent_backend_builder.py sample_erd.json
+# Free models (no cost!)
+python universal_backend_builder.py sample_erd.json --model qwen/qwen3-coder:free
+python universal_backend_builder.py sample_erd.json --model deepseek/deepseek-r1-0528:free
+
+# Premium models (high quality)
+python universal_backend_builder.py sample_erd.json --model gpt-4
+python universal_backend_builder.py sample_erd.json --model claude-3-sonnet
+python universal_backend_builder.py sample_erd.json --model gemini-pro
+
+# Or use presets
+python universal_backend_builder.py sample_erd.json --preset free      # Free models
+python universal_backend_builder.py sample_erd.json --preset premium   # Best quality
+python universal_backend_builder.py sample_erd.json --preset balanced  # Good + cheap
 ```
 
 **That's it!** You'll get a complete Django backend in the `backend/` folder.
+
+### **🤖 See All Supported Models**
+```bash
+python universal_backend_builder.py --list-models
+```
+Shows 15+ models including FREE ones and premium options from OpenAI, Anthropic, Google, etc.
 
 ## 📝 ERD Format
 

@@ -6,6 +6,14 @@ import re
 import ast
 import tempfile
 import subprocess
+import asyncio
+import aiofiles
+import hashlib
+import time
+import logging
+from dataclasses import dataclass
+from typing import Dict, List, Optional, Any, Tuple
+from datetime import datetime
 from dotenv import load_dotenv
 from openai import OpenAI
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -13,12 +21,234 @@ import shutil
 import uuid
 import textwrap
 
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
 # Load environment variables from .env file
 load_dotenv()
 
 def strip_markdown_code_fence(text):
     # Remove triple backticks and optional language specifier
     return re.sub(r'^```(?:python)?\s*|```$', '', text.strip(), flags=re.MULTILINE).strip()
+
+@dataclass
+class ValidationResult:
+    """Structured validation result with quality metrics."""
+    is_valid: bool
+    errors: List[str]
+    warnings: List[str]
+    quality_score: float
+    suggestions: List[str]
+    auto_approve: bool = False
+
+@dataclass
+class GenerationMetrics:
+    """Track performance metrics for each generation."""
+    agent_name: str
+    start_time: float
+    end_time: float
+    success: bool
+    cached: bool
+    quality_score: float
+    token_count: int
+
+class CacheManager:
+    """Intelligent caching system for generated code."""
+    
+    def __init__(self, cache_dir: Path = Path(".agent_cache")):
+        self.cache_dir = cache_dir
+        self.cache_dir.mkdir(exist_ok=True)
+        self.memory_cache = {}
+        logger.info(f"[CacheManager] Initialized with cache directory: {cache_dir}")
+    
+    def _get_cache_key(self, erd: dict, agent_type: str) -> str:
+        """Generate cache key based on ERD and agent type."""
+        erd_str = json.dumps(erd, sort_keys=True)
+        combined = f"{erd_str}:{agent_type}"
+        return hashlib.md5(combined.encode()).hexdigest()
+    
+    async def get(self, erd: dict, agent_type: str) -> Optional[str]:
+        """Get cached result."""
+        cache_key = self._get_cache_key(erd, agent_type)
+        
+        # Check memory cache first
+        if cache_key in self.memory_cache:
+            logger.info(f"[CacheManager] Cache HIT (memory) for {agent_type}")
+            return self.memory_cache[cache_key]
+        
+        # Check disk cache
+        cache_file = self.cache_dir / f"{cache_key}_{agent_type}.py"
+        if cache_file.exists():
+            async with aiofiles.open(cache_file, 'r', encoding='utf-8') as f:
+                content = await f.read()
+                self.memory_cache[cache_key] = content
+                logger.info(f"[CacheManager] Cache HIT (disk) for {agent_type}")
+                return content
+        
+        logger.info(f"[CacheManager] Cache MISS for {agent_type}")
+        return None
+    
+    async def set(self, erd: dict, agent_type: str, content: str) -> None:
+        """Cache result to memory and disk."""
+        cache_key = self._get_cache_key(erd, agent_type)
+        
+        # Store in memory
+        self.memory_cache[cache_key] = content
+        
+        # Store on disk
+        cache_file = self.cache_dir / f"{cache_key}_{agent_type}.py"
+        async with aiofiles.open(cache_file, 'w', encoding='utf-8') as f:
+            await f.write(content)
+        
+        logger.info(f"[CacheManager] Cached result for {agent_type}")
+
+class EnhancedValidator:
+    """Multi-layer validation system with auto-approval."""
+    
+    def __init__(self, auto_approve_threshold: float = 0.8):
+        self.auto_approve_threshold = auto_approve_threshold
+        logger.info(f"[EnhancedValidator] Initialized with auto-approve threshold: {auto_approve_threshold}")
+    
+    async def validate(self, code: str, file_type: str, agent_name: str) -> ValidationResult:
+        """Run comprehensive validation."""
+        start_time = time.time()
+        
+        errors = []
+        warnings = []
+        suggestions = []
+        quality_scores = []
+        
+        # Layer 1: Syntax validation
+        syntax_result = await self._syntax_validation(code, file_type)
+        errors.extend(syntax_result.get('errors', []))
+        quality_scores.append(syntax_result.get('quality_score', 0.5))
+        
+        # Layer 2: Semantic validation
+        semantic_result = await self._semantic_validation(code, file_type)
+        warnings.extend(semantic_result.get('warnings', []))
+        suggestions.extend(semantic_result.get('suggestions', []))
+        quality_scores.append(semantic_result.get('quality_score', 0.5))
+        
+        # Layer 3: Best practices validation
+        practices_result = await self._best_practices_validation(code, file_type)
+        suggestions.extend(practices_result.get('suggestions', []))
+        quality_scores.append(practices_result.get('quality_score', 0.5))
+        
+        # Layer 4: Security validation
+        security_result = await self._security_validation(code, file_type)
+        errors.extend(security_result.get('errors', []))
+        warnings.extend(security_result.get('warnings', []))
+        quality_scores.append(security_result.get('quality_score', 0.5))
+        
+        # Calculate overall quality
+        overall_quality = sum(quality_scores) / len(quality_scores) if quality_scores else 0.0
+        is_valid = len(errors) == 0
+        auto_approve = is_valid and overall_quality >= self.auto_approve_threshold
+        
+        validation_time = time.time() - start_time
+        logger.info(f"[EnhancedValidator] {agent_name} validation complete in {validation_time:.2f}s - Quality: {overall_quality:.2f}, Auto-approve: {auto_approve}")
+        
+        return ValidationResult(
+            is_valid=is_valid,
+            errors=errors,
+            warnings=warnings,
+            quality_score=overall_quality,
+            suggestions=suggestions,
+            auto_approve=auto_approve
+        )
+    
+    async def _syntax_validation(self, code: str, file_type: str) -> dict:
+        """Check syntax validity."""
+        errors = []
+        if file_type.endswith('.py'):
+            try:
+                compile(code, '<string>', 'exec')
+            except SyntaxError as e:
+                errors.append(f"Syntax error: {e}")
+        
+        return {
+            'errors': errors,
+            'quality_score': 1.0 if not errors else 0.0
+        }
+    
+    async def _semantic_validation(self, code: str, file_type: str) -> dict:
+        """Check semantic correctness and Django patterns."""
+        warnings = []
+        suggestions = []
+        
+        # Django-specific checks
+        if 'models.py' in file_type:
+            if 'from django.db import models' not in code:
+                warnings.append("Missing Django models import")
+            if 'class' in code and '__str__' not in code:
+                suggestions.append("Consider adding __str__ methods to models")
+        
+        if 'serializers.py' in file_type:
+            if 'from rest_framework' not in code:
+                warnings.append("Missing Django REST Framework imports")
+            if 'ModelSerializer' in code and 'Meta:' not in code:
+                warnings.append("ModelSerializer missing Meta class")
+        
+        if 'views.py' in file_type:
+            if 'from rest_framework' not in code:
+                warnings.append("Missing Django REST Framework imports")
+        
+        return {
+            'warnings': warnings,
+            'suggestions': suggestions,
+            'quality_score': 0.8 if not warnings else 0.6
+        }
+    
+    async def _best_practices_validation(self, code: str, file_type: str) -> dict:
+        """Check coding best practices."""
+        suggestions = []
+        
+        lines = code.split('\n')
+        
+        # Check line length
+        long_lines = [i for i, line in enumerate(lines, 1) if len(line) > 120]
+        if long_lines:
+            suggestions.append(f"Lines too long (>120 chars): {long_lines[:3]}...")
+        
+        # Check for proper docstrings
+        if 'class' in code and '"""' not in code:
+            suggestions.append("Consider adding docstrings to classes")
+        
+        # Check for proper imports organization
+        if code.count('import') > 5 and code.find('\n\n') < code.find('import'):
+            suggestions.append("Consider organizing imports better")
+        
+        return {
+            'suggestions': suggestions,
+            'quality_score': 0.9 if not suggestions else 0.7
+        }
+    
+    async def _security_validation(self, code: str, file_type: str) -> dict:
+        """Check for security issues."""
+        errors = []
+        warnings = []
+        
+        # Check for hardcoded secrets
+        secret_keywords = ['password', 'secret', 'key', 'token', 'api_key']
+        for keyword in secret_keywords:
+            if keyword in code.lower() and any(quote in code for quote in ['"', "'"]):
+                # Check if it's actually hardcoded
+                lines = code.split('\n')
+                for line in lines:
+                    if keyword in line.lower() and ('=' in line or ':' in line):
+                        if any(f'{quote}{keyword}' in line.lower() for quote in ['"', "'"]):
+                            warnings.append(f"Possible hardcoded {keyword} detected")
+        
+        # Check for SQL injection risks
+        if 'raw(' in code or '.extra(' in code:
+            warnings.append("Raw SQL detected - ensure proper parameterization")
+        
+        return {
+            'errors': errors,
+            'warnings': warnings,
+            'quality_score': 1.0 if not errors and not warnings else 0.7
+        }
 
 class CriticAgent:
     """
@@ -73,21 +303,35 @@ class ReviserAgent:
         return strip_markdown_code_fence(completion.choices[0].message.content.strip())
 
 class ModelAgent:
-    def __init__(self, client, extra_headers, extra_body):
+    def __init__(self, client, extra_headers, extra_body, cache_manager: CacheManager):
         self.client = client
         self.extra_headers = extra_headers
         self.extra_body = extra_body
-    def generate(self, erd):
-        print("[ModelAgent] Generating models.py from ERD using OpenAI...")
+        self.cache_manager = cache_manager
+        self.agent_type = "models"
+    
+    async def generate(self, erd):
+        """Generate models.py with caching support."""
+        logger.info("[ModelAgent] Starting models.py generation...")
+        start_time = time.time()
+        
+        # Check cache first
+        cached_result = await self.cache_manager.get(erd, self.agent_type)
+        if cached_result:
+            return cached_result
+        
+        # Generate new content
         system_prompt = (
             "Role: You are an expert Django backend engineer specializing in database modeling.\n"
             "Task: Generate a Django models.py file from a provided ERD (Entity-Relationship Diagram) in JSON format.\n"
             "Input: The ERD JSON describing entities, fields, and relationships.\n"
             "Output: A complete, valid Django models.py file implementing all entities and relationships.\n"
-            "Constraints: \n"
-            "- Use only standard Django ORM features.\n"
+            "Enhanced Requirements:\n"
+            "- Add proper __str__ methods for all models\n"
+            "- Include appropriate Meta classes with ordering\n"
+            "- Add database indexes for performance\n"
+            "- Use proper field validators where appropriate\n"
             "- Follow Django and PEP8 best practices.\n"
-            "- Do not include extra comments or explanations.\n"
             "- Output only the code, no markdown or prose.\n"
             "Capabilities: \n"
             "- You can infer field types and relationships from the ERD.\n"
@@ -98,6 +342,32 @@ class ModelAgent:
             "- Do not include placeholder or example data."
         )
         prompt = f"""Given the following ERD (Entity-Relationship Diagram) as a JSON object, generate a Django models.py file.\nERD:\n{json.dumps(erd, indent=2)}\nReturn only the code for models.py."""
+        
+        # Make async OpenAI call
+        loop = asyncio.get_event_loop()
+        completion = await loop.run_in_executor(
+            None,
+            lambda: self.client.chat.completions.create(
+                model="qwen/qwen3-coder:free",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.2,
+                extra_headers=self.extra_headers,
+                extra_body=self.extra_body,
+            )
+        )
+        
+        result = strip_markdown_code_fence(completion.choices[0].message.content.strip())
+        
+        # Cache the result
+        await self.cache_manager.set(erd, self.agent_type, result)
+        
+        generation_time = time.time() - start_time
+        logger.info(f"[ModelAgent] Generation complete in {generation_time:.2f}s")
+        
+        return result
         completion = self.client.chat.completions.create(
             model="qwen/qwen3-coder:free",
             messages=[
@@ -112,10 +382,12 @@ class ModelAgent:
         return strip_markdown_code_fence(code)
 
 class SerializerAgent:
-    def __init__(self, client, extra_headers, extra_body):
+    def __init__(self, client, extra_headers, extra_body, cache_manager=None):
         self.client = client
         self.extra_headers = extra_headers
         self.extra_body = extra_body
+        self.cache_manager = cache_manager
+        self.agent_type = "serializers"
     def generate(self, erd):
         print("[SerializerAgent] Generating serializers.py using OpenAI...")
         system_prompt = (
@@ -149,10 +421,12 @@ class SerializerAgent:
         return strip_markdown_code_fence(code)
 
 class ViewAgent:
-    def __init__(self, client, extra_headers, extra_body):
+    def __init__(self, client, extra_headers, extra_body, cache_manager=None):
         self.client = client
         self.extra_headers = extra_headers
         self.extra_body = extra_body
+        self.cache_manager = cache_manager
+        self.agent_type = "views"
     def generate(self, erd):
         print("[ViewAgent] Generating views.py using OpenAI...")
         system_prompt = (
@@ -186,10 +460,12 @@ class ViewAgent:
         return strip_markdown_code_fence(code)
 
 class RouterAgent:
-    def __init__(self, client, extra_headers, extra_body):
+    def __init__(self, client, extra_headers, extra_body, cache_manager=None):
         self.client = client
         self.extra_headers = extra_headers
         self.extra_body = extra_body
+        self.cache_manager = cache_manager
+        self.agent_type = "urls"
     def generate(self, erd):
         print("[RouterAgent] Generating urls.py using OpenAI...")
         system_prompt = (
@@ -223,10 +499,12 @@ class RouterAgent:
         return strip_markdown_code_fence(code)
 
 class AuthAgent:
-    def __init__(self, client, extra_headers, extra_body):
+    def __init__(self, client, extra_headers, extra_body, cache_manager=None):
         self.client = client
         self.extra_headers = extra_headers
         self.extra_body = extra_body
+        self.cache_manager = cache_manager
+        self.agent_type = "settings"
     def generate(self, erd):
         print("[AuthAgent] Generating settings.py (auth section) using OpenAI...")
         system_prompt = (
@@ -259,10 +537,12 @@ class AuthAgent:
         return strip_markdown_code_fence(code)
 
 class DeploymentAgent:
-    def __init__(self, client, extra_headers, extra_body):
+    def __init__(self, client, extra_headers, extra_body, cache_manager=None):
         self.client = client
         self.extra_headers = extra_headers
         self.extra_body = extra_body
+        self.cache_manager = cache_manager
+        self.agent_type = "deployment"
     def generate(self, erd):
         print("[DeploymentAgent] Generating deployment files using OpenAI...")
         system_prompt = (
@@ -373,10 +653,12 @@ class CustomFeatureAgent:
     - Only generate code relevant to the described feature.
     - Do not overwrite unrelated code.
     """
-    def __init__(self, client, extra_headers, extra_body):
+    def __init__(self, client, extra_headers, extra_body, cache_manager=None):
         self.client = client
         self.extra_headers = extra_headers
         self.extra_body = extra_body
+        self.cache_manager = cache_manager
+        self.agent_type = "custom_feature"
     def generate(self, erd, feature_description, **kwargs):
         system_prompt = (
             "Role: You are a Django and Python expert specializing in implementing custom features from natural language descriptions.\n"
@@ -424,38 +706,251 @@ class PlannerAgent:
             "X-Title": os.getenv("OPENROUTER_TITLE", "YourSiteName"),
         }
         self.extra_body = {}
-        self.model_agent = ModelAgent(self.client, self.extra_headers, self.extra_body)
-        self.serializer_agent = SerializerAgent(self.client, self.extra_headers, self.extra_body)
-        self.view_agent = ViewAgent(self.client, self.extra_headers, self.extra_body)
-        self.router_agent = RouterAgent(self.client, self.extra_headers, self.extra_body)
-        self.auth_agent = AuthAgent(self.client, self.extra_headers, self.extra_body)
-        self.deployment_agent = DeploymentAgent(self.client, self.extra_headers, self.extra_body)
+        
+        # Initialize optimized components
+        self.cache_manager = CacheManager()
+        self.validator = EnhancedValidator(auto_approve_threshold=0.8)
+        self.metrics = []
+        self.pending_reviews = {}
+        
+        # Initialize agents with caching support
+        self.model_agent = ModelAgent(self.client, self.extra_headers, self.extra_body, self.cache_manager)
+        self.serializer_agent = SerializerAgent(self.client, self.extra_headers, self.extra_body, self.cache_manager)
+        self.view_agent = ViewAgent(self.client, self.extra_headers, self.extra_body, self.cache_manager)
+        self.router_agent = RouterAgent(self.client, self.extra_headers, self.extra_body, self.cache_manager)
+        self.auth_agent = AuthAgent(self.client, self.extra_headers, self.extra_body, self.cache_manager)
+        self.deployment_agent = DeploymentAgent(self.client, self.extra_headers, self.extra_body, self.cache_manager)
         self.critic_agent = CriticAgent()
         self.reviser_agent = ReviserAgent(self.client, self.extra_headers, self.extra_body)
         self.django_critic = DjangoCheckCritic()
-        self.custom_feature_agent = CustomFeatureAgent(self.client, self.extra_headers, self.extra_body)
+        self.custom_feature_agent = CustomFeatureAgent(self.client, self.extra_headers, self.extra_body, self.cache_manager)
 
     def run(self):
-        print("[Agent] Starting backend generation pipeline (parallel)...")
-        tasks = {
-            'models.py': lambda: self.safe_generate(self.generate_models, "models.py", filetype="python"),
-            'serializers.py': lambda: self.safe_generate(self.generate_serializers, "serializers.py", filetype="python"),
-            'views.py': lambda: self.safe_generate(self.generate_views, "views.py", filetype="python"),
-            'urls.py': lambda: self.safe_generate(self.generate_urls, "urls.py", filetype="python"),
-            'settings.py': lambda: self.safe_generate(self.generate_auth_setup, "settings.py", filetype="python"),
+        """Run the optimized async pipeline."""
+        return asyncio.run(self.async_run())
+    
+    async def async_run(self):
+        """Optimized async generation pipeline with caching, validation, and non-blocking HITL."""
+        logger.info("[PlannerAgent] Starting optimized async backend generation pipeline...")
+        pipeline_start = time.time()
+        
+        # Phase 1: Parallel Generation with Caching and Validation
+        generation_tasks = {
+            'models.py': self._generate_with_validation('models.py', self.model_agent),
+            'serializers.py': self._generate_with_validation('serializers.py', self.serializer_agent),
+            'views.py': self._generate_with_validation('views.py', self.view_agent),
+            'urls.py': self._generate_with_validation('urls.py', self.router_agent),
+            'settings.py': self._generate_with_validation('settings.py', self.auth_agent),
         }
-        outputs = {}
-        with ThreadPoolExecutor(max_workers=len(tasks)) as executor:
-            future_to_name = {executor.submit(func): name for name, func in tasks.items()}
-            for future in as_completed(future_to_name):
-                name = future_to_name[future]
-                try:
-                    result = future.result()
-                    print(f"[Agent] {name} generation complete.")
-                    outputs[name] = result
-                except Exception as exc:
-                    print(f"[Agent] {name} generated an exception: {exc}")
-                    outputs[name] = f"# ERROR: Failed to generate {name}"
+        
+        logger.info(f"[PlannerAgent] Starting {len(generation_tasks)} parallel generations...")
+        
+        # Execute all generations concurrently
+        results = await asyncio.gather(*generation_tasks.values(), return_exceptions=True)
+        
+        # Process results
+        validated_outputs = {}
+        auto_approved = []
+        needs_review = []
+        
+        for i, (file_name, task) in enumerate(generation_tasks.items()):
+            result = results[i]
+            if isinstance(result, Exception):
+                logger.error(f"[{file_name}] Generation failed: {result}")
+                validated_outputs[file_name] = f"# ERROR: Failed to generate {file_name}"
+                continue
+            
+            content, validation_result, metrics = result
+            validated_outputs[file_name] = content
+            
+            # Track metrics
+            self.metrics.append(metrics)
+            
+            # Handle validation results
+            if validation_result.auto_approve:
+                auto_approved.append(file_name)
+                logger.info(f"[HITL] Auto-approved {file_name} (quality: {validation_result.quality_score:.2f})")
+            else:
+                needs_review.append(file_name)
+                self.pending_reviews[file_name] = {
+                    'content': content,
+                    'validation': validation_result,
+                    'timestamp': datetime.now()
+                }
+        
+        # Phase 2: Non-blocking HITL Review
+        if needs_review:
+            logger.info(f"[HITL] {len(needs_review)} files need manual review: {needs_review}")
+            await self._handle_hitl_reviews(needs_review, validated_outputs)
+        
+        logger.info(f"[HITL] Auto-approved: {len(auto_approved)}, Manual review: {len(needs_review)}")
+        
+        outputs = validated_outputs
+        
+        # Continue with existing logic for deployment files, etc.
+        outputs.update(self.generate_deployment_files())
+        
+        # Store final outputs
+        self.outputs = outputs
+        
+        # Phase 3: Write files to disk asynchronously
+        await self._write_outputs_async(outputs)
+        
+        pipeline_time = time.time() - pipeline_start
+        logger.info(f"[PlannerAgent] Optimized pipeline complete in {pipeline_time:.2f}s. Generated {len(outputs)} files.")
+        
+        # Print performance summary
+        self._print_performance_summary(pipeline_time, auto_approved, needs_review)
+        
+        return outputs
+    
+    async def _generate_with_validation(self, file_name: str, agent) -> Tuple[str, ValidationResult, GenerationMetrics]:
+        """Generate content with validation and metrics tracking."""
+        start_time = time.time()
+        
+        try:
+            # Check if agent has async generate method
+            if hasattr(agent, 'generate') and asyncio.iscoroutinefunction(agent.generate):
+                content = await agent.generate(self.erd)
+                cached = False  # Could check cache_manager for this info
+            else:
+                # Fallback to sync generation wrapped in executor
+                loop = asyncio.get_event_loop()
+                content = await loop.run_in_executor(None, agent.generate, self.erd)
+                cached = False
+            
+            # Validate generated content
+            validation_result = await self.validator.validate(content, file_name, agent.__class__.__name__)
+            
+            # Create metrics
+            metrics = GenerationMetrics(
+                agent_name=agent.__class__.__name__,
+                start_time=start_time,
+                end_time=time.time(),
+                success=True,
+                cached=cached,
+                quality_score=validation_result.quality_score,
+                token_count=len(content.split())
+            )
+            
+            return content, validation_result, metrics
+            
+        except Exception as e:
+            logger.error(f"[{file_name}] Generation failed: {e}")
+            
+            # Create error metrics
+            metrics = GenerationMetrics(
+                agent_name=agent.__class__.__name__,
+                start_time=start_time,
+                end_time=time.time(),
+                success=False,
+                cached=False,
+                quality_score=0.0,
+                token_count=0
+            )
+            
+            error_content = f"# ERROR: Failed to generate {file_name}\n# Error: {str(e)}"
+            error_validation = ValidationResult(
+                is_valid=False,
+                errors=[str(e)],
+                warnings=[],
+                quality_score=0.0,
+                suggestions=[],
+                auto_approve=False
+            )
+            
+            return error_content, error_validation, metrics
+    
+    async def _handle_hitl_reviews(self, needs_review: List[str], validated_outputs: Dict[str, str]) -> None:
+        """Handle human-in-the-loop reviews in a non-blocking way."""
+        logger.info("[HITL] Starting non-blocking review process...")
+        
+        for file_name in needs_review:
+            review_data = self.pending_reviews[file_name]
+            validation_result = review_data['validation']
+            
+            print(f"\n" + "="*60)
+            print(f"REVIEW REQUIRED: {file_name}")
+            print(f"Quality Score: {validation_result.quality_score:.2f}")
+            
+            if validation_result.errors:
+                print(f"❌ ERRORS: {len(validation_result.errors)}")
+                for error in validation_result.errors:
+                    print(f"  - {error}")
+            
+            if validation_result.warnings:
+                print(f"⚠️  WARNINGS: {len(validation_result.warnings)}")
+                for warning in validation_result.warnings:
+                    print(f"  - {warning}")
+            
+            if validation_result.suggestions:
+                print(f"💡 SUGGESTIONS: {len(validation_result.suggestions)}")
+                for suggestion in validation_result.suggestions:
+                    print(f"  - {suggestion}")
+            
+            print(f"\nContent preview (first 200 chars):")
+            print(f"{validated_outputs[file_name][:200]}...")
+            print(f"\nOptions: [a]pprove, [r]eject, [e]dit, [s]kip")
+            
+            try:
+                decision = input(f"Decision for {file_name}: ").lower().strip()
+            except EOFError:
+                decision = "a"  # Default to approve if no input
+            
+            if decision == 'r':
+                validated_outputs[file_name] = f"# REJECTED: {file_name} was rejected during review"
+                logger.info(f"[HITL] {file_name} rejected")
+            elif decision == 'e':
+                print("Edit mode not implemented in this demo. Approving with current content.")
+                logger.info(f"[HITL] {file_name} approved after edit request")
+            elif decision == 's':
+                validated_outputs[file_name] = f"# SKIPPED: {file_name} was skipped during review"
+                logger.info(f"[HITL] {file_name} skipped")
+            else:
+                logger.info(f"[HITL] {file_name} approved")
+    
+    async def _write_outputs_async(self, outputs: Dict[str, str]) -> None:
+        """Write outputs to disk asynchronously."""
+        self.backend_dir.mkdir(exist_ok=True)
+        
+        write_tasks = []
+        for filename, content in outputs.items():
+            file_path = self.backend_dir / filename
+            write_tasks.append(self._write_file_async(file_path, content))
+        
+        await asyncio.gather(*write_tasks)
+        logger.info(f"[Writer] All {len(outputs)} files written to {self.backend_dir.resolve()}")
+    
+    async def _write_file_async(self, file_path: Path, content: str) -> None:
+        """Write a single file asynchronously."""
+        async with aiofiles.open(file_path, 'w', encoding='utf-8') as f:
+            await f.write(content)
+        logger.info(f"[Writer] Wrote {file_path}")
+    
+    def _print_performance_summary(self, pipeline_time: float, auto_approved: List[str], needs_review: List[str]) -> None:
+        """Print performance summary."""
+        print(f"\n" + "="*60)
+        print(f"🚀 OPTIMIZED PIPELINE PERFORMANCE SUMMARY")
+        print(f"="*60)
+        print(f"⏱️  Total time: {pipeline_time:.2f}s")
+        print(f"✅ Auto-approved: {len(auto_approved)} files")
+        print(f"👁️  Manual review: {len(needs_review)} files")
+        
+        if self.metrics:
+            avg_quality = sum(m.quality_score for m in self.metrics) / len(self.metrics)
+            cached_count = sum(1 for m in self.metrics if m.cached)
+            print(f"📊 Average quality score: {avg_quality:.2f}")
+            print(f"💾 Cache hits: {cached_count}/{len(self.metrics)}")
+            
+            # Show per-agent performance
+            print(f"\n📈 Per-agent performance:")
+            for metric in self.metrics:
+                generation_time = metric.end_time - metric.start_time
+                status = "✅" if metric.success else "❌"
+                cache_status = "💾" if metric.cached else "🔄"
+                print(f"  {status} {cache_status} {metric.agent_name}: {generation_time:.2f}s (Q: {metric.quality_score:.2f})")
+        
+        print(f"="*60)
         # Django check critic
         print("[DjangoCheckCritic] Running python manage.py check on generated code...")
         ok, error = self.django_critic.check(outputs)
