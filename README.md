@@ -87,6 +87,53 @@ python enterprise_backend_builder.py massive_erd.json --preset enterprise
 **✅ Dependency Resolution**: Handles complex relationships and circular deps
 **✅ Progressive Generation**: Builds incrementally for massive systems
 
+## 🔧 **Developer Feedback Integration**
+
+Never lose developer input again! Our system learns from your feedback:
+
+### **📝 Inline Comment Processing**
+```python
+# Just add comments to generated code:
+# FIX: make this async
+# TODO: add validation  
+# IMPROVE: optimize query
+# BUG: email should be unique
+
+class User(models.Model):
+    name = models.CharField(max_length=100)
+    email = models.EmailField()  # BUG: should be unique
+```
+
+### **🔄 Interactive Review Workflow**
+```bash
+python feedback_demo.py
+
+# Example output:
+🔍 REVIEWING: MODELS
+📄 Generated Code Preview (15/23 lines):
+  1 | from django.db import models
+  2 | 
+  3 | class User(models.Model):
+➤ 4 |     # FIX: make this async
+  5 |     name = models.CharField(max_length=100)
+
+💬 Inline Comments Found:
+   Line 4: FIX - make this async
+
+🎯 What would you like to do?
+   [1] ✅ Approve (code looks good)
+   [2] ❌ Reject (regenerate)  
+   [3] ✏️  Edit (make changes)
+   [4] 💬 Add feedback (comment)
+   [5] ⏭️  Skip (no action)
+```
+
+### **🧠 Learns & Improves Automatically**
+- **Pattern Recognition**: Notices you often request async/await
+- **Adaptive Prompts**: Future generations include learned patterns
+- **Quality Improvement**: Gets better with each interaction
+- **Persistent Memory**: Remembers feedback across sessions
+
 ## 📝 ERD Format
 
 ```json
