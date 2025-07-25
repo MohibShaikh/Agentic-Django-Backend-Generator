@@ -176,59 +176,43 @@ backend/
 Below is a high-level overview of the agentic workflow used to generate your Django backend:
 
 ```mermaid
-flowchart TD
-    subgraph Input["🎯 Input Phase"]
-        A["User provides ERD (JSON)"]
-    end
-
-    subgraph Orchestration["🧠 Orchestration Phase"]
-        B["PlannerAgent<br/>(Orchestrates workflow)"]
-    end
-
-    subgraph Generation["⚡ Generation Phase"]
-        C1["ModelAgent<br/>models.py"]
-        C2["SerializerAgent<br/>serializers.py"]
-        C3["ViewAgent<br/>views.py"]
-        C4["RouterAgent<br/>urls.py"]
-        C5["AuthAgent<br/>settings.py (auth)"]
-        C6["CustomFeatureAgent<br/>(optional)"]
-    end
-
-    subgraph HITL_Review["👤 Human-in-the-Loop Review"]
-        D1["✅ Approve/Edit/Skip models.py"]
-        D2["✅ Approve/Edit/Skip serializers.py"]
-        D3["✅ Approve/Edit/Skip views.py"]
-        D4["✅ Approve/Edit/Skip urls.py"]
-        D5["✅ Approve/Edit/Skip settings.py"]
-        D6["✅ Approve/Edit/Skip custom feature"]
-    end
-
-    subgraph Deployment["🚀 Deployment Phase"]
-        E["DeploymentAgent<br/>requirements.txt, Dockerfile, Procfile"]
-        F["📁 All code written to backend/ directory"]
-    end
-
-    A --> B
-    B --> C1 --> D1
-    D1 --> C2 --> D2
-    D2 --> C3 --> D3
-    D3 --> C4 --> D4
-    D4 --> C5 --> D5
-    D5 --> C6 --> D6
-    D6 --> E --> F
-
-    %% Professional Styling with High Contrast
-    classDef inputNode fill:#e1f5fe,stroke:#01579b,stroke-width:3px,color:#000;
-    classDef orchestrationNode fill:#f3e5f5,stroke:#4a148c,stroke-width:3px,color:#000;
-    classDef agentNode fill:#e8f5e8,stroke:#1b5e20,stroke-width:3px,color:#000;
-    classDef hitlNode fill:#fff3e0,stroke:#e65100,stroke-width:3px,color:#000;
-    classDef deployNode fill:#fce4ec,stroke:#880e4f,stroke-width:3px,color:#000;
+graph TD
+    A["🎯 Django Requirements<br/>ERD + Business Rules + Auth"] --> B["🎼 DomainOrchestrator<br/>Central coordinator"]
     
-    class A inputNode;
-    class B orchestrationNode;
-    class C1,C2,C3,C4,C5,C6 agentNode;
-    class D1,D2,D3,D4,D5,D6 hitlNode;
-    class E,F deployNode;
+    B --> C["🧠 BusinessLogicAgent<br/>Worker specialist"]
+    B --> D["🔐 AuthenticationAgent<br/>Worker specialist"]
+    B --> E["🚀 APIAgent<br/>Worker specialist"]
+    
+    C --> F["🔗 DomainExpertHub<br/>Communication center"]
+    D --> F
+    E --> F
+    
+    F --> G["📨 Cross-Domain<br/>Consultation"]
+    F --> H["🔍 Cross-Domain<br/>Validation"]
+    
+    G --> I["🤝 Agent Collaboration<br/>Shared insights"]
+    H --> I
+    
+    I --> J["📋 Knowledge Synthesis<br/>Orchestrator combines results"]
+    
+    J --> K["🎉 Integrated Django Backend<br/>Business Logic + Auth + API"]
+    
+    %% Feedback loops
+    C -.-> D
+    D -.-> C
+    C -.-> E
+    D -.-> E
+    
+    %% Styling
+    classDef orchestrator fill:#e3f2fd
+    classDef workers fill:#e8f5e8
+    classDef communication fill:#fff3e0
+    classDef output fill:#f3e5f5
+    
+    class B orchestrator
+    class C,D,E workers
+    class F,G,H,I communication
+    class A,J,K output
 ```
 
 ## Usage
