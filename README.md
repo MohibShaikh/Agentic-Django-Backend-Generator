@@ -1,287 +1,345 @@
-# 🚀 Agentic Django Backend Generator
+# Django Multi-Agent Backend Generator
 
-**Generate complete Django REST API backends from ERD files in minutes, not hours.**
+**Generate production-ready Django backends from ERD files using specialized AI agents.**
 
-Takes your ERD JSON → AI agents generate → Production-ready Django backend
+Takes your ERD JSON → **4 AI Domain Experts** collaborate → Complete Django project with **proper structure**
 
-## ✨ What You Get
+## Multi-Agent AI System
 
-- **Complete Django Backend**: Models, Views, Serializers, URLs, Settings
-- **Production Ready**: Docker, deployment files, requirements.txt
-- **3-5x Faster**: Parallel generation with intelligent caching
-- **Smart Review**: Only review files that need attention (80% auto-approved)
-- **Error Recovery**: Automatic fallback models and retry logic
+Our **Orchestrator-workers** pattern uses 4 specialized domain expert agents:
+
+| Agent | Domain | Capabilities |
+|-------|--------|-------------|
+| **BusinessLogicAgent** | Business Rules & Validation | Custom model methods, validation rules, business logic patterns |
+| **AuthenticationAgent** | Auth & Permissions | JWT, OAuth, role-based access, permission classes |
+| **APIAgent** | REST/GraphQL APIs | DRF ViewSets, pagination, filtering, custom endpoints |
+| **TestingAgent** | Test Generation | Unit tests, API tests, factories, comprehensive coverage |
+
+## What You Get
+
+- **Proper Django Structure** - Separate `core/` project config and `backend/` app  
+- **Production Ready** - Settings, WSGI, ASGI, migrations, admin interface  
+- **REST API** - Django REST Framework with ViewSets, serializers, pagination  
+- **JWT Authentication** - Complete auth system with roles and permissions  
+- **Comprehensive Tests** - Unit tests, API tests, factories with 80%+ coverage  
+- **Business Logic** - Custom validation, model methods, business rules  
+- **API Extensions** - Advanced filtering, search, custom actions  
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
-### **1. Install**
+### **1. Install Dependencies**
 ```bash
-pip install openai aiofiles
+pip install django djangorestframework djangorestframework-simplejwt
+pip install django-filter factory-boy pytest pytest-django coverage
+pip install openai python-dotenv  # For AI generation
 ```
 
-### **2. Choose Your Model & Set API Key**
+### **2. Set OpenRouter API Key (Optional)**
 ```bash
-# Use any model you want!
-export OPENROUTER_API_KEY="your_key_here"  # For 300+ models
-export OPENAI_API_KEY="your_key_here"      # For GPT models
-export ANTHROPIC_API_KEY="your_key_here"   # For Claude models
-export GOOGLE_API_KEY="your_key_here"      # For Gemini models
+# Create .env file
+echo "OPENROUTER_API_KEY=your_key_here" > .env
+
+# Or set environment variable
+export OPENROUTER_API_KEY="your_key_here"
 ```
 
-### **3. Run with ANY Model**
+### **3. Generate Django Backend**
 ```bash
-# Free models (no cost!)
-python universal_backend_builder.py sample_erd.json --model qwen/qwen3-coder:free
-python universal_backend_builder.py sample_erd.json --model deepseek/deepseek-r1-0528:free
+# Basic usage
+python generate_django_backend.py --erd sample_erd.json
 
-# Premium models (high quality)
-python universal_backend_builder.py sample_erd.json --model gpt-4
-python universal_backend_builder.py sample_erd.json --model claude-3-sonnet
-python universal_backend_builder.py sample_erd.json --model gemini-pro
+# Custom output directory
+python generate_django_backend.py --erd my_project.json --output ./my_backend/
 
-# Or use presets
-python universal_backend_builder.py sample_erd.json --preset free      # Free models
-python universal_backend_builder.py sample_erd.json --preset premium   # Best quality
-python universal_backend_builder.py sample_erd.json --preset balanced  # Good + cheap
+# Get help
+python generate_django_backend.py --help
 ```
 
-**That's it!** You'll get a complete Django backend in the `backend/` folder.
+**That's it!** You'll get a complete Django project with proper structure.
 
-### **🤖 See All Supported Models**
-```bash
-python universal_backend_builder.py --list-models
+---
+
+## Generated Project Structure
+
 ```
-Shows 15+ models including FREE ones and premium options from OpenAI, Anthropic, Google, etc.
-
-## 🏢 **For Very Complex ERDs (Enterprise)**
-
-Got a massive ERD with 50+ entities? Use our enterprise-grade system:
-
-### **🔍 Analyze Complexity First**
-```bash
-python enterprise_backend_builder.py your_massive_erd.json --analyze-only
-```
-
-### **🚀 Intelligent Processing**
-```bash
-# For massive ERDs (automatically detects complexity)
-python enterprise_backend_builder.py massive_erd.json --preset enterprise
-
-# Example output:
-# 📊 ERD Analysis Complete:
-#    • Entities: 37
-#    • Relationships: 60  
-#    • Complexity Score: 0.49
-#    • Recommended Chunks: 2
-#    • 🟡 MEDIUM COMPLEXITY - Chunked processing recommended
-```
-
-### **🧠 What Makes It Efficient:**
-
-**✅ Smart Chunking**: Breaks massive ERDs into dependency-aware chunks
-**✅ Token Optimization**: Minimizes API calls and costs for huge schemas  
-**✅ Memory Management**: Handles 100+ entity ERDs without memory issues
-**✅ Parallel Processing**: Generates multiple chunks simultaneously
-**✅ Dependency Resolution**: Handles complex relationships and circular deps
-**✅ Progressive Generation**: Builds incrementally for massive systems
-
-## 🔧 **Developer Feedback Integration**
-
-Never lose developer input again! Our system learns from your feedback:
-
-### **📝 Inline Comment Processing**
-```python
-# Just add comments to generated code:
-# FIX: make this async
-# TODO: add validation  
-# IMPROVE: optimize query
-# BUG: email should be unique
-
-class User(models.Model):
-    name = models.CharField(max_length=100)
-    email = models.EmailField()  # BUG: should be unique
+my_backend/                      # Project root
+├── manage.py                   # Django management script
+├── requirements.txt            # All dependencies (8 packages)
+├── README.md                   # Setup instructions
+├── core/                       # Django project configuration
+│   ├── __init__.py
+│   ├── settings.py             # Complete Django settings
+│   ├── urls.py                 # Main URL configuration
+│   ├── wsgi.py                 # WSGI for deployment
+│   └── asgi.py                 # ASGI for async/WebSocket
+└── backend/                    # Your Django application
+    ├── __init__.py
+    ├── apps.py                 # App configuration
+    ├── models.py               # ERD-generated models
+    ├── admin.py                # Django admin setup
+    ├── views.py                # DRF ViewSets
+    ├── serializers.py          # DRF Serializers
+    ├── urls.py                 # App URL patterns
+    ├── tests.py                # AI-generated comprehensive tests
+    ├── business_logic.py       # Business rules & validation
+    ├── authentication.py       # JWT auth & permissions
+    ├── api_extensions.py       # Advanced API features
+    └── migrations/             # Database migrations
+        └── __init__.py
 ```
 
-### **🔄 Interactive Review Workflow**
-```bash
-python feedback_demo.py
+---
 
-# Example output:
-🔍 REVIEWING: MODELS
-📄 Generated Code Preview (15/23 lines):
-  1 | from django.db import models
-  2 | 
-  3 | class User(models.Model):
-➤ 4 |     # FIX: make this async
-  5 |     name = models.CharField(max_length=100)
+## ERD Format
 
-💬 Inline Comments Found:
-   Line 4: FIX - make this async
-
-🎯 What would you like to do?
-   [1] ✅ Approve (code looks good)
-   [2] ❌ Reject (regenerate)  
-   [3] ✏️  Edit (make changes)
-   [4] 💬 Add feedback (comment)
-   [5] ⏭️  Skip (no action)
-```
-
-### **🧠 Learns & Improves Automatically**
-- **Pattern Recognition**: Notices you often request async/await
-- **Adaptive Prompts**: Future generations include learned patterns
-- **Quality Improvement**: Gets better with each interaction
-- **Persistent Memory**: Remembers feedback across sessions
-
-## 📝 ERD Format
+Create a JSON file with your database schema:
 
 ```json
 {
-  "entities": [
-    {
-      "name": "User",
-      "fields": [
-        {"name": "id", "type": "AutoField", "primary_key": true},
-        {"name": "username", "type": "CharField", "max_length": 150},
-        {"name": "email", "type": "EmailField"}
-      ]
+  "erd": {
+    "entities": {
+      "User": {
+        "fields": {
+          "username": "str",
+          "email": "str", 
+          "first_name": "str",
+          "created_at": "datetime"
+        },
+        "relationships": {}
+      },
+      "Job": {
+        "fields": {
+          "title": "str",
+          "description": "text",
+          "salary": "decimal",
+          "is_active": "bool"
+        },
+        "relationships": {
+          "posted_by": "ForeignKey(User)"
+        }
+      }
     }
-  ]
-}
-```  
-- Sequential or Parallel Agent Execution  
-- Rate Limit Handling for OpenRouter APIs  
-
----
-
-## Output Structure
-
-```bash
-backend/
-├── models.py
-├── serializers.py
-├── views.py
-├── urls.py
-├── settings.py
-├── auth/
-│   └── custom_auth.py
-├── requirements.txt
-├── Dockerfile
-└── Procfile
-```
-
-## Agentic Workflow Diagram
-
-Below is a high-level overview of the agentic workflow used to generate your Django backend:
-
-```mermaid
-flowchart TD
-    subgraph Input["🎯 Input Phase"]
-        A["User provides ERD (JSON)"]
-    end
-
-    subgraph Orchestration["🧠 Orchestration Phase"]
-        B["PlannerAgent<br/>(Orchestrates workflow)"]
-    end
-
-    subgraph Generation["⚡ Generation Phase"]
-        C1["ModelAgent<br/>models.py"]
-        C2["SerializerAgent<br/>serializers.py"]
-        C3["ViewAgent<br/>views.py"]
-        C4["RouterAgent<br/>urls.py"]
-        C5["AuthAgent<br/>settings.py (auth)"]
-        C6["CustomFeatureAgent<br/>(optional)"]
-    end
-
-    subgraph HITL_Review["👤 Human-in-the-Loop Review"]
-        D1["✅ Approve/Edit/Skip models.py"]
-        D2["✅ Approve/Edit/Skip serializers.py"]
-        D3["✅ Approve/Edit/Skip views.py"]
-        D4["✅ Approve/Edit/Skip urls.py"]
-        D5["✅ Approve/Edit/Skip settings.py"]
-        D6["✅ Approve/Edit/Skip custom feature"]
-    end
-
-    subgraph Deployment["🚀 Deployment Phase"]
-        E["DeploymentAgent<br/>requirements.txt, Dockerfile, Procfile"]
-        F["📁 All code written to backend/ directory"]
-    end
-
-    A --> B
-    B --> C1 --> D1
-    D1 --> C2 --> D2
-    D2 --> C3 --> D3
-    D3 --> C4 --> D4
-    D4 --> C5 --> D5
-    D5 --> C6 --> D6
-    D6 --> E --> F
-
-    %% Professional Styling with High Contrast
-    classDef inputNode fill:#e1f5fe,stroke:#01579b,stroke-width:3px,color:#000;
-    classDef orchestrationNode fill:#f3e5f5,stroke:#4a148c,stroke-width:3px,color:#000;
-    classDef agentNode fill:#e8f5e8,stroke:#1b5e20,stroke-width:3px,color:#000;
-    classDef hitlNode fill:#fff3e0,stroke:#e65100,stroke-width:3px,color:#000;
-    classDef deployNode fill:#fce4ec,stroke:#880e4f,stroke-width:3px,color:#000;
-    
-    class A inputNode;
-    class B orchestrationNode;
-    class C1,C2,C3,C4,C5,C6 agentNode;
-    class D1,D2,D3,D4,D5,D6 hitlNode;
-    class E,F deployNode;
-```
-
-## Usage
-
-1. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-2. **Set your OpenRouter API key:**
-   ```bash
-   export OPENROUTER_API_KEY=your-openrouter-key
-   # Optionally set HTTP-Referer and X-Title for OpenRouter rankings
-   export OPENROUTER_REFERER=https://your-site-url.example.com
-   export OPENROUTER_TITLE=YourSiteName
-   ```
-3. **Run the agentic backend builder:**
-   ```bash
-   python agent_backend_builder.py sample_erd.json
-   ```
-4. **Follow the prompts:**
-   - Review, approve, edit, or skip each generated file.
-   - Optionally add custom features when prompted.
-
-## Example ERD Input
-```json
-{
-  "User": {
-    "name": "CharField",
-    "email": "EmailField",
-    "has_many": ["Job"]
   },
-  "Job": {
-    "title": "CharField",
-    "description": "TextField",
-    "posted_by": "ForeignKey:User"
+  "business_rules": [
+    {
+      "rule": "Job salary must be positive",
+      "applies_to": "Job",
+      "field": "salary"
+    }
+  ],
+  "auth_requirements": {
+    "authentication": "JWT",
+    "roles": ["JobSeeker", "Employer", "Admin"],
+    "permissions": {
+      "Job": {
+        "create": ["Employer", "Admin"],
+        "read": ["JobSeeker", "Employer", "Admin"]
+      }
+    }
+  },
+  "api_requirements": {
+    "format": "REST",
+    "pagination": true,
+    "filtering": true
   }
 }
 ```
 
-## Models Supported
-- [x] Qwen3-Coder (qwen/qwen3-coder:free)
-- [x] DeepSeek (deepseek/deepseek-r1-0528:free)
-- [x] Any OpenRouter-compatible LLM
+---
 
-## Advanced Features
-- Modular agent design for easy extension (add new agents for new features)
-- Custom Feature Agent for business-specific needs
-- Human-in-the-Loop review for enterprise compliance
-- Rate limit handling for OpenRouter models
+## Setup Your Generated Project
 
-## License
-MIT
+```bash
+# Navigate to generated project
+cd my_backend/
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Create and run migrations
+python manage.py makemigrations backend
+python manage.py migrate
+
+# Create superuser
+python manage.py createsuperuser
+
+# Run development server
+python manage.py runserver
+```
+
+### Access Your API
+
+- **API Root**: http://localhost:8000/api/
+- **Admin Interface**: http://localhost:8000/admin/
+- **API Endpoints**: 
+  - Users: http://localhost:8000/api/users/
+  - Jobs: http://localhost:8000/api/jobs/
 
 ---
 
-**Build your Django backend, faster, safer, and with full AI + human control!** 
+## Advanced Features
+
+### **AI-Powered Generation**
+
+When OpenRouter API key is provided, agents use LLM for intelligent code generation:
+
+- **BusinessLogicAgent**: Generates sophisticated business rules
+- **AuthenticationAgent**: Creates role-based permission systems  
+- **APIAgent**: Builds advanced API endpoints with filtering
+- **TestingAgent**: Writes comprehensive test suites
+
+### **Developer Feedback Integration**
+
+Add inline comments to influence future generations:
+
+```python
+# In generated code, add comments like:
+# FIX: make this async
+# TODO: add validation
+# IMPROVE: optimize query
+
+class User(models.Model):
+    email = models.EmailField()  # FIX: should be unique
+```
+
+Run the feedback demo:
+```bash
+python feedback_demo.py
+```
+
+### **Interactive Review**
+
+The system supports interactive code review:
+- Preview generated code
+- Approve/reject changes
+- Add feedback comments
+- Learn from your preferences
+
+---
+
+## Architecture
+
+### **Orchestrator-Workers Pattern**
+
+Our system follows the **Orchestrator-workers** workflow pattern as defined in [Anthropic's guide to building effective agents](https://www.anthropic.com/engineering/building-effective-agents). This pattern uses "a central LLM dynamically breaks down tasks, delegates them to worker LLMs, and synthesizes their results."
+
+```mermaid
+graph TD
+    A["ERD Input<br/>+ Business Rules<br/>+ Auth Requirements<br/>+ API Requirements"] --> B["DomainOrchestrator<br/>Central LLM coordinator"]
+    
+    B --> C["BusinessLogicAgent<br/>Worker LLM specialist"]
+    B --> D["AuthenticationAgent<br/>Worker LLM specialist"]
+    B --> E["APIAgent<br/>Worker LLM specialist"]
+    B --> F["TestingAgent<br/>Worker LLM specialist"]
+    
+    C --> G["DomainExpertHub<br/>Inter-agent communication"]
+    D --> G
+    E --> G
+    F --> G
+    
+    G --> H["Cross-Domain Validation<br/>Agents review each other's work"]
+    G --> I["Shared Knowledge<br/>Insights flow between agents"]
+    
+    H --> J["Knowledge Synthesis<br/>Orchestrator combines results"]
+    I --> J
+    
+    J --> K["Complete Django Backend<br/>core/ + backend/ structure<br/>Models + API + Auth + Tests"]
+    
+    %% Collaboration arrows
+    C -.-> D
+    C -.-> E  
+    C -.-> F
+    D -.-> E
+    D -.-> F
+    E -.-> F
+    
+    %% Styling
+    classDef orchestrator fill:#e3f2fd,stroke:#1976d2,stroke-width:3px
+    classDef workers fill:#e8f5e8,stroke:#388e3c,stroke-width:2px
+    classDef communication fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    classDef output fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    
+    class B orchestrator
+    class C,D,E,F workers
+    class G,H,I,J communication
+    class A,K output
+```
+
+### **Why Orchestrator-Workers Pattern?**
+
+This pattern is ideal for our Django generator because:
+
+- **Complex, unpredictable subtasks**: The specific business logic, auth requirements, API features, and tests needed depend entirely on the input ERD and requirements
+- **Domain expertise**: Each worker agent specializes in a specific area (business logic, auth, APIs, testing) rather than being a generalist
+- **Dynamic delegation**: The orchestrator determines which agents to activate and in what order based on the specific project requirements
+- **Synthesis capability**: The final Django project requires intelligently combining outputs from all domains into a cohesive, working system
+
+As the [Anthropic article](https://www.anthropic.com/engineering/building-effective-agents) notes: *"This workflow is well-suited for complex tasks where you can't predict the subtasks needed... the key difference from parallelization is its flexibility—subtasks aren't pre-defined, but determined by the orchestrator based on the specific input."*
+
+### **Agent Collaboration**
+
+- **Shared Knowledge**: Agents share insights across domains
+- **Cross-Validation**: Each agent validates others' outputs
+- **Dependency Management**: Logical execution order
+- **Error Recovery**: Fallback to template generation
+
+---
+
+## Examples
+
+### **Blog System**
+```bash
+# Create blog_erd.json with Post, User, Comment entities
+python generate_django_backend.py --erd blog_erd.json --output blog_backend/
+```
+
+### **E-commerce Platform**  
+```bash
+# Create ecommerce_erd.json with Product, Order, Customer entities
+python generate_django_backend.py --erd ecommerce_erd.json --output shop_backend/
+```
+
+### **Job Board**
+```bash
+# Use the included sample
+python generate_django_backend.py --erd sample_erd.json --output job_board/
+```
+
+---
+
+## Customization
+
+### **Extend Generated Code**
+
+1. **Business Logic**: Add methods to `backend/business_logic.py`
+2. **Authentication**: Customize auth in `backend/authentication.py`  
+3. **API Features**: Enhance endpoints in `backend/api_extensions.py`
+4. **Tests**: Add test cases to `backend/tests.py`
+
+### **Integration Points**
+
+- **Models**: Inherit from business logic mixins
+- **Views**: Use authentication decorators
+- **Serializers**: Apply business rule validation
+- **Tests**: Extend generated test factories
+
+---
+
+## Contributing
+
+1. **Add New Agents**: Create domain experts for specific needs
+2. **Enhance Templates**: Improve fallback code generation
+3. **Feedback System**: Contribute to pattern learning
+4. **ERD Extensions**: Support more field types and relationships
+
+---
+
+## License
+
+MIT License - Generate as many backends as you want!
+
+---
+
+**Made with ❤️ using Django Multi-Agent Architecture** 

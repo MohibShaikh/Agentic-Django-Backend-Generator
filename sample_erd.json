@@ -1,12 +1,61 @@
 {
-  "User": {
-    "name": "CharField",
-    "email": "EmailField",
-    "has_many": ["Job"]
+  "erd": {
+    "entities": {
+      "User": {
+        "fields": {
+          "username": "str",
+          "email": "str",
+          "first_name": "str",
+          "last_name": "str",
+          "created_at": "datetime",
+          "updated_at": "datetime"
+        },
+        "relationships": {}
+      },
+      "Job": {
+        "fields": {
+          "title": "str",
+          "description": "text",
+          "salary": "decimal",
+          "location": "str",
+          "is_active": "bool",
+          "created_at": "datetime",
+          "updated_at": "datetime"
+        },
+        "relationships": {
+          "posted_by": "ForeignKey(User)"
+        }
+      }
+    }
   },
-  "Job": {
-    "title": "CharField",
-    "description": "TextField",
-    "posted_by": "ForeignKey:User"
+  "business_rules": [
+    {
+      "rule": "User can only post active jobs",
+      "applies_to": "Job",
+      "field": "is_active"
+    },
+    {
+      "rule": "Job salary must be positive",
+      "applies_to": "Job", 
+      "field": "salary"
+    }
+  ],
+  "auth_requirements": {
+    "authentication": "JWT",
+    "roles": ["JobSeeker", "Employer", "Admin"],
+    "permissions": {
+      "Job": {
+        "create": ["Employer", "Admin"],
+        "read": ["JobSeeker", "Employer", "Admin"],
+        "update": ["Employer", "Admin"],
+        "delete": ["Admin"]
+      }
+    }
+  },
+  "api_requirements": {
+    "format": "REST", 
+    "pagination": true,
+    "filtering": true,
+    "versioning": "url"
   }
 } 
