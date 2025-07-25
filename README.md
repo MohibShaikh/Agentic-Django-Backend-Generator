@@ -1,10 +1,10 @@
-# 🚀 Agentic Django Backend Generator
+# Agentic Django Backend Generator
 
 **Generate complete Django REST API backends from ERD files in minutes, not hours.**
 
 Takes your ERD JSON → AI agents generate → Production-ready Django backend
 
-## ✨ What You Get
+## What You Get
 
 - **Complete Django Backend**: Models, Views, Serializers, URLs, Settings
 - **Production Ready**: Docker, deployment files, requirements.txt
@@ -14,7 +14,7 @@ Takes your ERD JSON → AI agents generate → Production-ready Django backend
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### **1. Install**
 ```bash
